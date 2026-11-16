@@ -1,0 +1,35 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Stat oauth2-proxy binary file
+      ansible.builtin.stat:
+        path: /opt/oauth2-proxy/oauth2-proxy
+      register: oauth2_proxy_file
+
+    - name: Check oauth2-proxy binary file exists and executable
+      ansible.builtin.assert:
+        that:
+          - oauth2_proxy_file.stat.exists
+          - oauth2_proxy_file.stat.executable
+        fail_msg: oauth2-proxy binary file do not exist or isn't executable
+        success_msg: oauth2-proxy binary file present
+
+    - name: Check oauth2-proxy service is enabled and active
+      ansible.builtin.service_facts:
+
+    - name: Verify oauth2-proxy service state
+      ansible.builtin.assert:
+        that:
+          - "'oauth2-proxy.service' in ansible_facts['services']"
+          - ansible_facts['services']['oauth2-proxy.service']['status'] | default('not-found') == 'enabled'
+          - ansible_facts['services']['oauth2-proxy.service']['state'] | default('not-found') == 'running'
+        fail_msg: oauth2-proxy.service isn't enabled or running
+        success_msg: oauth2-proxy.service is enabled and running
+
+    - name: Test TCP port is open
+      ansible.builtin.wait_for:
+        port: 4180
+        timeout: 5
+        msg: oauth2-proxy TCP port not open, the service is not ready

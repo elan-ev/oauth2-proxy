@@ -1,0 +1,9 @@
+- name: Converge
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: elan.oauth2_proxy
+      vars:
+        oauth2_proxy_client_id: myapp
+        oauth2_proxy_client_secret: secure_hash
+        oauth2_proxy_cookie_secret: TVhKbm5qSGZDOENwQzlhMVM2Y0FQdnRFWEJzZTFhZXA=
