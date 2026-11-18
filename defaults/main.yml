@@ -12,7 +12,11 @@ oauth2_proxy_reverse_proxy: false
 oauth2_proxy_trusted_proxy_ips: ["0.0.0.0/0", "::/0"]
 # the OAuth Redirect URL
 oauth2_proxy_redirect_url: https://{{ inventory_hostname }}/oauth2/callback
-# authenticate emails with the specified domains. Use * to authenticate any email
+oauth2_proxy_service_domain: "\
+  {{ oauth2_proxy_redirect_url | ansible.builtin.urlsplit('hostname') }}\
+  {{ oauth2_proxy_redirect_url | ansible.builtin.urlsplit('port') |
+  ternary('_' ~ (oauth2_proxy_redirect_url | ansible.builtin.urlsplit('port') | string), '') }}"
+# Authenticate emails with the specified domains. Use * to authenticate any email
 oauth2_proxy_email_domains: ["*"]
 # the OAuth Client ID
 # oauth2_proxy_client_id:

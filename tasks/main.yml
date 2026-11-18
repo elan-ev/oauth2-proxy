@@ -91,7 +91,7 @@
 - name: Configure oauth2-proxy
   ansible.builtin.template:
     src: oauth2-proxy.cfg
-    dest: /etc/oauth2-proxy/
+    dest: /etc/oauth2-proxy/{{ oauth2_proxy_service_domain }}.cfg
     owner: oauth2-proxy
     group: root
     mode: "0640"
@@ -99,7 +99,7 @@
 
 - name: Create service definitions
   ansible.builtin.copy:
-    src: oauth2-proxy.service
+    src: oauth2-proxy@.service
     dest: /etc/systemd/system/
     owner: root
     group: root
@@ -114,6 +114,6 @@
 
 - name: Enable auth2-proxy service
   ansible.builtin.systemd:
-    name: oauth2-proxy.service
+    name: oauth2-proxy@{{ oauth2_proxy_service_domain }}.service
     enabled: true
     state: started

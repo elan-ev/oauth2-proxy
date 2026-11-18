@@ -1,6 +1,6 @@
 [Unit]
 Description=oauth2-proxy daemon service
-AssertPathExists=/etc/oauth2-proxy/oauth2-proxy.cfg
+AssertPathExists=/etc/oauth2-proxy/%I.cfg
 After=network.target
 Wants=network.target
 StartLimitIntervalSec=5
@@ -11,7 +11,7 @@ User=oauth2-proxy
 Restart=on-failure
 RestartSec=5
 WorkingDirectory=/opt/oauth2-proxy
-ExecStart=/opt/oauth2-proxy/oauth2-proxy --config=/etc/oauth2-proxy/oauth2-proxy.cfg
+ExecStart=/opt/oauth2-proxy/oauth2-proxy --config=/etc/oauth2-proxy/%I.cfg
 ExecReload=/bin/kill -HUP $MAINPID
 LimitNOFILE=65535
 NoNewPrivileges=true

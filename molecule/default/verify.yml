@@ -15,21 +15,43 @@
           - oauth2_proxy_file.stat.executable
         fail_msg: oauth2-proxy binary file do not exist or isn't executable
         success_msg: oauth2-proxy binary file present
+        quiet: true
 
-    - name: Check oauth2-proxy service is enabled and active
+    - name: Gather services facts
       ansible.builtin.service_facts:
 
     - name: Verify oauth2-proxy service state
       ansible.builtin.assert:
         that:
-          - "'oauth2-proxy.service' in ansible_facts['services']"
-          - ansible_facts['services']['oauth2-proxy.service']['status'] | default('not-found') == 'enabled'
-          - ansible_facts['services']['oauth2-proxy.service']['state'] | default('not-found') == 'running'
-        fail_msg: oauth2-proxy.service isn't enabled or running
-        success_msg: oauth2-proxy.service is enabled and running
+          - oauth2_proxy_service_name in ansible_facts['services']
+          - ansible_facts['services'][oauth2_proxy_service_name]['status'] | default('not-found') == 'active'
+          - ansible_facts['services'][oauth2_proxy_service_name]['state'] | default('not-found') == 'running'
+        fail_msg: "{{ oauth2_proxy_service_name }} isn't enabled or running"
+        success_msg: "{{ oauth2_proxy_service_name }} is enabled and running"
+        quiet: true
+      vars:
+        oauth2_proxy_service_name: "oauth2-proxy@{{ inventory_hostname }}.service"
 
-    - name: Test TCP port is open
+    - name: Test default TCP port is open
       ansible.builtin.wait_for:
         port: 4180
         timeout: 5
         msg: oauth2-proxy TCP port not open, the service is not ready
+
+    - name: Verify oauth2-proxy service state for the second instance
+      ansible.builtin.assert:
+        that:
+          - oauth2_proxy_service_name in ansible_facts['services']
+          - ansible_facts['services'][oauth2_proxy_service_name]['status'] | default('not-found') == 'active'
+          - ansible_facts['services'][oauth2_proxy_service_name]['state'] | default('not-found') == 'running'
+        fail_msg: "{{ oauth2_proxy_service_name }} isn't enabled or running"
+        success_msg: "{{ oauth2_proxy_service_name }} is enabled and running"
+        quiet: true
+      vars:
+        oauth2_proxy_service_name: "oauth2-proxy@myotherapp.edu.org.service"
+
+    - name: Test custom TCP port 4181 is open
+      ansible.builtin.wait_for:
+        port: 4181
+        timeout: 5
+        msg: oauth2-proxy custom TCP port 4181 not open, the service is not ready
