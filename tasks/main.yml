@@ -1,3 +1,49 @@
+- name: Check architecture
+  vars:
+    app_version: "{{ oauth2_proxy_version | ansible.builtin.regex_search('^(latest|v?\\d+.\\d+.\\d+?)$', '\\1', ignorecase=True) | first }}"
+    arch_map:
+      x86_64: "amd64"
+      aarch64: "arm64"
+      armv5l: "armv5"
+      armv6l: "armv6"
+      armv7l: "armv7"
+      s390x: "s390x"
+      ppc64le: "ppc64le"
+  block:
+    - name: Gather facts
+      ansible.builtin.gather_facts:
+
+    - name: Assert you are running on Linux
+      ansible.builtin.assert:
+        that:
+          - ansible_system == 'Linux'
+        fail_msg: Your system ({{ ansible_system }}) is not supported by oauth2-proxy
+        success_msg: You are running on supported system
+        quiet: true
+
+    - name: Assert CPU architecture is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_architecture in arch_map
+        fail_msg: Your CPU architecture ({{ ansible_architecture }}) is not supported by oauth2-proxy
+        success_msg: You are running an supported CPU architecture
+        quiet: true
+
+    - name: Set oauth2-proxy release arch
+      ansible.builtin.set_fact:
+        oauth2_proxy_release_arch: "{{ arch_map[ansible_architecture] }}"
+
+    - name: Fetch download URL
+      ansible.builtin.uri:
+        url: https://api.github.com/repos/oauth2-proxy/oauth2-proxy/releases/{{ app_version if app_version == 'latest' else 'tags/' + app_version }}
+        return_content: true
+      register: oauth2_proxy_release_latest
+
+    - name: Parse oauth2-proxy version and release download URL
+      ansible.builtin.set_fact:
+        oauth2_proxy_release_version: "{{ oauth2_proxy_release_latest.json.name }}"
+        oauth2_proxy_download_url: "{{ oauth2_proxy_release_latest.json.assets | selectattr('name', 'match', 'oauth2-proxy-.+\\.linux-' + oauth2_proxy_release_arch + '\\.tar\\.gz') | map(attribute='browser_download_url') | first }}"  # noqa yaml[line-length]
+
 - name: Create oauth2-proxy user
   ansible.builtin.user:
     name: oauth2-proxy
@@ -20,17 +66,6 @@
       mode: "0750"
   notify: Restart oauth2-proxy
 
-- name: Fetch download URL
-  ansible.builtin.uri:
-    url: https://api.github.com/repos/oauth2-proxy/oauth2-proxy/releases/tags/{{ oauth2_proxy_version }}
-    return_content: true
-  register: oauth2_proxy_release_latest
-
-- name: Parse oauth2-proxy version and release download URL
-  ansible.builtin.set_fact:
-    oauth2_proxy_version: "{{ oauth2_proxy_release_latest.json.name }}"
-    oauth2_proxy_download_url: "{{ oauth2_proxy_release_latest.json.assets | selectattr('name', 'match', 'oauth2-proxy-.+\\.linux-amd64\\.tar\\.gz') | map(attribute='browser_download_url') | first }}"  # noqa yaml[line-length]
-
 - name: Is oauth2-proxy already installed
   ansible.builtin.stat:
     path: /opt/oauth2-proxy/version.txt
@@ -48,19 +83,23 @@
   when: oauth2_proxy_version_file_stat.stat.exists
 
 - name: Installation tasks
-  when: "oauth2_proxy_installed_version | default('undefined') != oauth2_proxy_version"
+  when: "oauth2_proxy_installed_version | default('undefined') != oauth2_proxy_release_version"
   block:
+    - name: Include uninstall oauth2-proxy tasks
+      ansible.builtin.include_tasks:
+        file: uninstall.yml
+
     - name: Download oauth2-proxy release
       ansible.builtin.get_url:
         url: "{{ oauth2_proxy_download_url }}"
-        dest: "/opt/oauth2-proxy/oauth2_proxy_linux_amd64.tar.gz"
+        dest: "/opt/oauth2-proxy/oauth2-proxy-linux.tar.gz"
         owner: root
         group: root
         mode: "0644"
 
     - name: Extract oauth2-proxy release
       ansible.builtin.unarchive:
-        src: "/opt/oauth2-proxy/oauth2_proxy_linux_amd64.tar.gz"
+        src: "/opt/oauth2-proxy/oauth2-proxy-linux.tar.gz"
         dest: /opt/oauth2-proxy/
         remote_src: true
         list_files: true
@@ -69,7 +108,7 @@
 
     - name: Delete oauth2-proxy release
       ansible.builtin.file:
-        path: "/opt/oauth2-proxy/oauth2_proxy_linux_amd64.tar.gz"
+        path: "/opt/oauth2-proxy/oauth2-proxy-linux.tar.gz"
         state: absent
 
     - name: Assert oauth2-proxy binary exists
@@ -77,11 +116,12 @@
         that: "'oauth2-proxy' in oauth2_proxy_release_unarchive.files"
         fail_msg: "oauth2-proxy binary not in the release tarball"
         success_msg: "oauth2-proxy binary extracted"
+        quiet: true
 
     - name: Persist installed oauth2-proxy version
       ansible.builtin.copy:
         dest: /opt/oauth2-proxy/version.txt
-        content: "{{ oauth2_proxy_version }}"
+        content: "{{ oauth2_proxy_release_version }}"
         owner: root
         group: root
         mode: "0644"
