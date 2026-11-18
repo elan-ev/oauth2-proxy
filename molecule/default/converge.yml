@@ -3,18 +3,16 @@
   gather_facts: false
   roles:
     - role: elan.oauth2_proxy
-      vars:
-        oauth2_proxy_client_id: myapp
-        oauth2_proxy_client_secret: secure_hash
-        oauth2_proxy_cookie_secret: TVhKbm5qSGZDOENwQzlhMVM2Y0FQdnRFWEJzZTFhZXA=
+      oauth2_proxy_client_id: myapp
+      oauth2_proxy_client_secret: secure_hash
+      oauth2_proxy_cookie_secret: TVhKbm5qSGZDOENwQzlhMVM2Y0FQdnRFWEJzZTFhZXA=
 
     - role: elan.oauth2_proxy
-      vars:
-        oauth2_proxy_http_address: "127.0.0.1:4181"
-        oauth2_proxy_client_id: myotherapp
-        oauth2_proxy_client_secret: secure_hash2
-        oauth2_proxy_cookie_secret: TVhKbm5qSGZDOENwQzlhMVM2Y0FQdnRFWEJzZTFhZXA=
-        oauth2_proxy_redirect_url: https://myotherapp.edu.org/oauth2/callback
-        oauth2_proxy_extra_config:
-          oidc_issuer_url: https://idm.myedu.org/oauth2/default
-          skip_provider_button: true
+      oauth2_proxy_http_address: "127.0.0.1:4181"
+      oauth2_proxy_client_id: myotherapp
+      oauth2_proxy_client_secret: secure_hash2
+      oauth2_proxy_cookie_secret: TVhKbm5qSGZDOENwQzlhMVM2Y0FQdnRFWEJzZTFhZXA=
+      oauth2_proxy_redirect_url: https://myotherapp.edu.org/oauth2/callback
+      oauth2_proxy_extra_config:
+        oidc_issuer_url: https://idm.myedu.org/oauth2/default
+        skip_provider_button: true
