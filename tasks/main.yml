@@ -97,14 +97,6 @@
     mode: "0640"
   notify: Restart oauth2-proxy
 
-- name: Set extra configuration values
-  ansible.builtin.lineinfile:
-    path: /etc/oauth2-proxy/oauth2-proxy.cfg
-    regexp: '^(#\s*)?{{ item.key }}.+'
-    line: "{{ item.key }} = {{ item.value }}"
-  loop: "{{ oauth2_proxy_extra_config | dict2items }}"
-  notify: Restart oauth2-proxy
-
 - name: Create service definitions
   ansible.builtin.copy:
     src: oauth2-proxy.service

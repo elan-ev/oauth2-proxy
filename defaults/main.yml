@@ -31,11 +31,13 @@ oauth2_proxy_cookie_domains: ""
 oauth2_proxy_cookie_expire: "168h"
 # refresh the cookie after this duration; 0 to disable; not supported by all providers
 oauth2_proxy_cookie_refresh: "0"
-# Additional configurations as dictionary; string values must be wrapped in quotation marks like '"my string value"'
+# Additional configurations as dictionary; You can find all configuration options
+# in the [oauth2-proxy documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview).
 # example:
 #
 # oauth2_proxy_extra_config:
-#   - approval_prompt: '"auto"'
-#   - oidc_issuer_url: '"https://idp.edu.org"'
+#   - approval_prompt: auto
+#   - oidc_issuer_url: https://idp.edu.org
 #   - skip_oidc_discovery: false
+#   - skip_provider_button: true
 oauth2_proxy_extra_config: {}
