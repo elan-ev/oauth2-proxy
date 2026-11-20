@@ -128,31 +128,40 @@
         force: true
       notify: Restart oauth2-proxy
 
-- name: Configure oauth2-proxy
-  ansible.builtin.template:
-    src: oauth2-proxy.cfg
-    dest: /etc/oauth2-proxy/{{ oauth2_proxy_service_domain }}.cfg
-    owner: oauth2-proxy
-    group: root
-    mode: "0640"
-  notify: Restart oauth2-proxy
+- name: Configure oauth2-proxy and create service definition
+  vars:
+    oauth2_proxy_config_redirect_url: "{{ oauth2_proxy_config['redirect_url']
+      if 'redirect_url' in oauth2_proxy_config else 'https://%s/' | format(inventory_hostname) }}"
+    oauth2_proxy_service_domain: "\
+      {{ oauth2_proxy_config_redirect_url | ansible.builtin.urlsplit('hostname') }}\
+      {{ oauth2_proxy_config_redirect_url | ansible.builtin.urlsplit('port') |
+      ternary('_' + (oauth2_proxy_config_redirect_url | ansible.builtin.urlsplit('port') | string), '') }}"
+  block:
+    - name: Configure oauth2-proxy
+      ansible.builtin.template:
+        src: oauth2-proxy.cfg
+        dest: /etc/oauth2-proxy/{{ oauth2_proxy_service_domain }}.cfg
+        owner: oauth2-proxy
+        group: root
+        mode: "0640"
+      notify: Restart oauth2-proxy
 
-- name: Create service definitions
-  ansible.builtin.copy:
-    src: oauth2-proxy@.service
-    dest: /etc/systemd/system/
-    owner: root
-    group: root
-    mode: "0644"
-  register: oauth2_proxy_service_installed
-  notify: Restart oauth2-proxy
+    - name: Create service definitions
+      ansible.builtin.copy:
+        src: oauth2-proxy@.service
+        dest: /etc/systemd/system/
+        owner: root
+        group: root
+        mode: "0644"
+      register: oauth2_proxy_service_installed
+      notify: Restart oauth2-proxy
 
-- name: Reload service configurations  # noqa no-handler
-  ansible.builtin.systemd:
-    daemon_reload: true
-  when: oauth2_proxy_service_installed is changed
+    - name: Reload service configurations  # noqa no-handler
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: oauth2_proxy_service_installed is changed
 
-- name: Enable auth2-proxy service
-  ansible.builtin.systemd:
-    name: oauth2-proxy@{{ oauth2_proxy_service_domain }}.service
-    enabled: true
+    - name: Enable auth2-proxy service
+      ansible.builtin.systemd:
+        name: oauth2-proxy@{{ oauth2_proxy_service_domain }}.service
+        enabled: true

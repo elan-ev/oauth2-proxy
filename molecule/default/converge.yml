@@ -5,19 +5,29 @@
   #   oauth2_proxy_version: v7.14.2
   roles:
     - role: elan.oauth2_proxy
-      oauth2_proxy_client_id: myapp
-      oauth2_proxy_client_secret: secure_hash
-      # `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
-      oauth2_proxy_cookie_secret: TVhKbm5qSGZDOENwQzlhMVM2Y0FQdnRFWEJzZTFhZXA=
+      oauth2_proxy_config:
+        client_id: myapp
+        client_secret: secure_hash
+        # `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
+        cookie_secret: TVhKbm5qSGZDOENwQzlhMVM2Y0FQdnRFWEJzZTFhZXA=
+        email_domains: ["*"]
 
     - role: elan.oauth2_proxy
-      oauth2_proxy_http_address: "127.0.0.1:4181"
-      oauth2_proxy_client_id: myotherapp
-      oauth2_proxy_client_secret: other_secure_hash
-      # cookie secret generated with
-      # `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
-      oauth2_proxy_cookie_secret: g56ymUz4zvUKtVBdFW3rrE7zn_6ul3GNTT1tCjwP3s0==
-      oauth2_proxy_redirect_url: https://my-otherapp.edu.org/oauth2/callback
-      oauth2_proxy_extra_config:
-        oidc_issuer_url: https://idm.myedu.org/oauth2/default
+      oauth2_proxy_config:
+        http_address: "127.0.0.1:4181"
+        # special case with non alphanumeric character and port given
+        redirect_url: https://my-app.edu.org:8080/oauth2/callback
+        email_domains: ["*"]
+        provider: oidc
+        oidc_issuer_url: https://idm.myedu.org
+        skip_oidc_discovery: true
+        login_url: https://idm.myedu.org/idp/profile/oidc/authorize
+        redeem_url: https://idm.myedu.org/idp/profile/oidc/end-session
+        oidc_jwks_url: https://idm.myedu.org/idp/profile/oidc/keyset
+        client_id: myotherapp
+        client_secret: other_secure_hash
+        scope: openid email profile
+        # cookie secret generated with
+        # `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
+        cookie_secret: g56ymUz4zvUKtVBdFW3rrE7zn_6ul3GNTT1tCjwP3s0==
         skip_provider_button: true

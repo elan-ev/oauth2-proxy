@@ -7,7 +7,7 @@
 
 - name: Stop oauth2-proxy service for specific domain
   ansible.builtin.systemd:
-    name: "oauth2-proxy@{{ item | regex_replace('^/etc/oauth2-proxy/([^/]+)\\.cfg$', '\\1')}}.service"
+    name: "oauth2-proxy@{{ item | regex_replace('^/etc/oauth2-proxy/([^/]+)\\.cfg$', '\\1') }}.service"
     state: stopped
     enabled: false
   loop: "{{ oauth2_proxy_configs.files | default([]) | map(attribute='path') }}"

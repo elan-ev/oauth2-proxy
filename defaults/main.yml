@@ -3,49 +3,29 @@
 # Values are listed on the oauth2-proxy (release GitHub page)[https://github.com/oauth2-proxy/oauth2-proxy/releases/].
 # A special value `latest` will provide always the newest release version
 oauth2_proxy_version: latest
-# [http://]<addr>:<port> or unix://<path> or fd:<int> (case insensitive) to listen on for HTTP clients.
-# Unix sockets are created with default system umask mode, which can be overridden,
-# e.g. unix://my-socket,mode=0777. Square brackets are required for ipv6 address, e.g. http://[::1]:4180
-oauth2_proxy_http_address: "127.0.0.1:4180"
-# Are we running behind a reverse proxy, controls whether headers like X-Real-IP are accepted and
-# allows X-Forwarded-{Proto,Host,Uri} headers to be used on redirect selection
-oauth2_proxy_reverse_proxy: false
-# List of direct proxy IPs or CIDR ranges allowed to supply X-Forwarded-* headers when `oauth2_proxy_reverse_proxy` is enabled.
-# Include every trusted proxy hop that can appear in XFF.
-# If not set, OAuth2 Proxy preserves backwards compatibility by trusting all source IPs (0.0.0.0/0, ::/0) and logs a warning at startup.
-oauth2_proxy_trusted_proxy_ips: ["0.0.0.0/0", "::/0"]
-# The OAuth Redirect URL
-oauth2_proxy_redirect_url: "https://{{ inventory_hostname }}/oauth2/callback"
-oauth2_proxy_service_domain: "\
-  {{ oauth2_proxy_redirect_url | ansible.builtin.urlsplit('hostname') }}\
-  {{ oauth2_proxy_redirect_url | ansible.builtin.urlsplit('port') |
-  ternary('_' ~ (oauth2_proxy_redirect_url | ansible.builtin.urlsplit('port') | string), '') }}"
-# Authenticate emails with the specified domains. Use * to authenticate any email
-oauth2_proxy_email_domains: ["*"]
-# The OAuth Client ID
-# oauth2_proxy_client_id:
-# The OAuth Client Secret
-# oauth2_proxy_client_secret:
-# OAuth scope specification. Every provider has a default list of scopes which will be used in case no scope is configured.
-oauth2_proxy_scope: "openid email profile"
-# The name of the cookie that the oauth_proxy creates.
-oauth2_proxy_cookie_name: "_oauth2_proxy"
-# The seed string for secure cookies (optionally base64 encoded)
-# oauth2_proxy_cookie_secret: ""
-# Optional cookie domains to force cookies to (e.g. .yourcompany.com).
-# The longest domain matching the request's host will be used (or the shortest cookie domain if there is no match).
-oauth2_proxy_cookie_domains: ""
-# Expire timeframe for cookie. If set to 0, cookie becomes a session-cookie which will expire when the browser is closed.
-oauth2_proxy_cookie_expire: "168h"
-# Refresh the cookie after this duration; 0 to disable; not supported by all providers
-oauth2_proxy_cookie_refresh: "0"
-# Additional configurations as dictionary; You can find all configuration options
+
+# Oauth2-proxy configurations as dictionary. You can find all configuration options
 # in the [oauth2-proxy documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview).
 # example:
 #
-# oauth2_proxy_extra_config:
-#   - approval_prompt: auto
-#   - oidc_issuer_url: https://idp.edu.org
-#   - skip_oidc_discovery: false
-#   - skip_provider_button: true
-oauth2_proxy_extra_config: {}
+# oauth2_proxy_config:
+#   http_address: 127.0.0.1:4181
+#   redirect_url: https://{{ inventory_hostname }}/oauth2/callback
+#   email_domains: ["*"]
+#   provider: oidc
+#   oidc_issuer_url: https://idm.myedu.org
+#   skip_oidc_discovery: true
+#   login_url: https://idm.myedu.org/idp/profile/oidc/authorize
+#   redeem_url: https://idm.myedu.org/idp/profile/oidc/end-session
+#   oidc_jwks_url: https://idm.myedu.org/idp/profile/oidc/keyset
+#   client_id: myotherapp
+#   client_secret: other_secure_hash
+#   scope: openid email profile
+#   # cookie secret generated with
+#   # `python -c 'import os,base64; print(base64.urlsafe_b64encode(os.urandom(32)).decode())'`
+#   cookie_secret: g56ymUz4zvUKtVBdFW3rrE7zn_6ul3GNTT1tCjwP3s0==
+#   skip_provider_button: true
+#
+# Some configuration values are required and should be provided.
+# Please consult [oauth2-proxy documentation](https://oauth2-proxy.github.io/oauth2-proxy/configuration/overview).
+oauth2_proxy_config: {}

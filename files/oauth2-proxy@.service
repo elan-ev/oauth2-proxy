@@ -3,13 +3,13 @@ Description=oauth2-proxy daemon service
 AssertPathExists=/etc/oauth2-proxy/%i.cfg
 After=network.target
 Wants=network.target
-StartLimitIntervalSec=5
+StartLimitIntervalSec=1
 StartLimitBurst=3
 
 [Service]
 User=oauth2-proxy
 Restart=on-failure
-RestartSec=5
+RestartSec=1
 WorkingDirectory=/opt/oauth2-proxy
 ExecStart=/opt/oauth2-proxy/oauth2-proxy --config=/etc/oauth2-proxy/%i.cfg
 ExecReload=/bin/kill -HUP $MAINPID
