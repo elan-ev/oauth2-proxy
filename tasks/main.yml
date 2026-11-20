@@ -16,22 +16,22 @@
     - name: Assert you are running on Linux
       ansible.builtin.assert:
         that:
-          - ansible_system == 'Linux'
-        fail_msg: Your system ({{ ansible_system }}) is not supported by oauth2-proxy
+          - ansible_facts["system"] == 'Linux'
+        fail_msg: Your system ({{ ansible_facts["system"] }}) is not supported by oauth2-proxy
         success_msg: You are running on supported system
         quiet: true
 
     - name: Assert CPU architecture is supported
       ansible.builtin.assert:
         that:
-          - ansible_architecture in arch_map
-        fail_msg: Your CPU architecture ({{ ansible_architecture }}) is not supported by oauth2-proxy
+          - ansible_facts["architecture"] in arch_map
+        fail_msg: Your CPU architecture ({{ ansible_facts["architecture"] }}) is not supported by oauth2-proxy
         success_msg: You are running an supported CPU architecture
         quiet: true
 
     - name: Set oauth2-proxy release arch
       ansible.builtin.set_fact:
-        oauth2_proxy_release_arch: "{{ arch_map[ansible_architecture] }}"
+        oauth2_proxy_release_arch: "{{ arch_map[ansible_facts['architecture']] }}"
 
     - name: Fetch download URL
       ansible.builtin.uri:
