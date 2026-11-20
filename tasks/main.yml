@@ -1,0 +1,167 @@
+- name: Check architecture
+  vars:
+    app_version: "{{ oauth2_proxy_version | ansible.builtin.regex_search('^(latest|v?\\d+.\\d+.\\d+?)$', '\\1', ignorecase=True) | first }}"
+    arch_map:
+      x86_64: "amd64"
+      aarch64: "arm64"
+      armv5l: "armv5"
+      armv6l: "armv6"
+      armv7l: "armv7"
+      s390x: "s390x"
+      ppc64le: "ppc64le"
+  block:
+    - name: Gather facts
+      ansible.builtin.gather_facts:
+
+    - name: Assert you are running on Linux
+      ansible.builtin.assert:
+        that:
+          - ansible_facts["system"] == 'Linux'
+        fail_msg: Your system ({{ ansible_facts["system"] }}) is not supported by oauth2-proxy
+        success_msg: You are running on supported system
+        quiet: true
+
+    - name: Assert CPU architecture is supported
+      ansible.builtin.assert:
+        that:
+          - ansible_facts["architecture"] in arch_map
+        fail_msg: Your CPU architecture ({{ ansible_facts["architecture"] }}) is not supported by oauth2-proxy
+        success_msg: You are running an supported CPU architecture
+        quiet: true
+
+    - name: Set oauth2-proxy release arch
+      ansible.builtin.set_fact:
+        oauth2_proxy_release_arch: "{{ arch_map[ansible_facts['architecture']] }}"
+
+    - name: Fetch download URL
+      ansible.builtin.uri:
+        url: https://api.github.com/repos/oauth2-proxy/oauth2-proxy/releases/{{ app_version if app_version == 'latest' else 'tags/' + app_version }}
+        return_content: true
+      register: oauth2_proxy_release_latest
+
+    - name: Parse oauth2-proxy version and release download URL
+      ansible.builtin.set_fact:
+        oauth2_proxy_release_version: "{{ oauth2_proxy_release_latest.json.name }}"
+        oauth2_proxy_download_url: "{{ oauth2_proxy_release_latest.json.assets | selectattr('name', 'match', 'oauth2-proxy-.+\\.linux-' + oauth2_proxy_release_arch + '\\.tar\\.gz') | map(attribute='browser_download_url') | first }}"  # noqa yaml[line-length]
+
+- name: Create oauth2-proxy user
+  ansible.builtin.user:
+    name: oauth2-proxy
+    comment: oauth2-proxy service user
+    system: true
+    shell: /bin/false
+
+- name: Create directories
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: oauth2-proxy
+    group: root
+    mode: "{{ item.mode | default('0755') }}"
+    state: directory
+  loop:
+    - path: /opt/oauth2-proxy
+    - path: /etc/oauth2-proxy
+      mode: "0750"
+    - path: /var/log/oauth2-proxy
+      mode: "0750"
+  notify: Restart oauth2-proxy
+
+- name: Is oauth2-proxy already installed
+  ansible.builtin.stat:
+    path: /opt/oauth2-proxy/version.txt
+  register: oauth2_proxy_version_file_stat
+
+- name: Read installed oauth2-proxy version
+  ansible.builtin.slurp:
+    src: /opt/oauth2-proxy/version.txt
+  when: oauth2_proxy_version_file_stat.stat.exists
+  register: oauth2_proxy_installed_version_file
+
+- name: Parse installed oauth2-proxy version
+  ansible.builtin.set_fact:
+    oauth2_proxy_installed_version: "{{ oauth2_proxy_installed_version_file.content | ansible.builtin.b64decode }}"
+  when: oauth2_proxy_version_file_stat.stat.exists
+
+- name: Installation tasks
+  when: "oauth2_proxy_installed_version | default('undefined') != oauth2_proxy_release_version"
+  block:
+    - name: Include uninstall oauth2-proxy tasks
+      ansible.builtin.include_tasks:
+        file: uninstall.yml
+
+    - name: Download oauth2-proxy release
+      ansible.builtin.get_url:
+        url: "{{ oauth2_proxy_download_url }}"
+        dest: "/opt/oauth2-proxy/oauth2-proxy-linux.tar.gz"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Extract oauth2-proxy release
+      ansible.builtin.unarchive:
+        src: "/opt/oauth2-proxy/oauth2-proxy-linux.tar.gz"
+        dest: /opt/oauth2-proxy/
+        remote_src: true
+        list_files: true
+        extra_opts: --strip-components=1
+      register: oauth2_proxy_release_unarchive
+
+    - name: Delete oauth2-proxy release
+      ansible.builtin.file:
+        path: "/opt/oauth2-proxy/oauth2-proxy-linux.tar.gz"
+        state: absent
+
+    - name: Assert oauth2-proxy binary exists
+      ansible.builtin.assert:
+        that: "'oauth2-proxy' in oauth2_proxy_release_unarchive.files"
+        fail_msg: "oauth2-proxy binary not in the release tarball"
+        success_msg: "oauth2-proxy binary extracted"
+        quiet: true
+
+    - name: Persist installed oauth2-proxy version
+      ansible.builtin.copy:
+        dest: /opt/oauth2-proxy/version.txt
+        content: "{{ oauth2_proxy_release_version }}"
+        owner: root
+        group: root
+        mode: "0644"
+        force: true
+      notify: Restart oauth2-proxy
+
+- name: Configure oauth2-proxy and create service definition
+  vars:
+    oauth2_proxy_config_redirect_url: "{{ oauth2_proxy_config['redirect_url']
+      if 'redirect_url' in oauth2_proxy_config else 'https://%s/' | format(inventory_hostname) }}"
+    oauth2_proxy_service_domain: "\
+      {{ oauth2_proxy_config_redirect_url | ansible.builtin.urlsplit('hostname') }}\
+      {{ oauth2_proxy_config_redirect_url | ansible.builtin.urlsplit('port') |
+      ternary('_' + (oauth2_proxy_config_redirect_url | ansible.builtin.urlsplit('port') | string), '') }}"
+  block:
+    - name: Configure oauth2-proxy
+      ansible.builtin.template:
+        src: oauth2-proxy.cfg
+        dest: /etc/oauth2-proxy/{{ oauth2_proxy_service_domain }}.cfg
+        owner: oauth2-proxy
+        group: root
+        mode: "0640"
+      notify: Restart oauth2-proxy
+
+    - name: Create service definitions
+      ansible.builtin.copy:
+        src: oauth2-proxy@.service
+        dest: /etc/systemd/system/
+        owner: root
+        group: root
+        mode: "0644"
+      register: oauth2_proxy_service_installed
+      notify: Restart oauth2-proxy
+
+    - name: Reload service configurations  # noqa no-handler
+      ansible.builtin.systemd:
+        daemon_reload: true
+      when: oauth2_proxy_service_installed is changed
+
+    - name: Enable auth2-proxy service
+      ansible.builtin.systemd:
+        name: oauth2-proxy@{{ oauth2_proxy_service_domain }}.service
+        enabled: true

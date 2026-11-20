@@ -1,0 +1,7 @@
+ansible
+ansible-lint
+molecule
+molecule-plugins
+molecule-plugins[docker]
+molecule-plugins[podman]
+tomlkit # needed by community.general.to_toml ansible filter

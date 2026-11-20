@@ -1,0 +1,8 @@
+# - name: Restart oauth2-proxy
+#   ansible.builtin.systemd:
+#     name: oauth2-proxy@{{ oauth2_proxy_service_domain }}.service
+#     state: restarted
+
+- name: Restart oauth2-proxy
+  ansible.builtin.include_tasks:
+    file: ../tasks/restart_oauth2_proxy_services.yml
