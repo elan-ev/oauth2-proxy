@@ -1,4 +1,4 @@
-- name: Read configuration directory content
+- name: Search for domain configurations
   ansible.builtin.find:
     paths: /etc/oauth2-proxy
     file_type: file
@@ -7,10 +7,10 @@
 
 - name: Stop oauth2-proxy service for specific domain
   ansible.builtin.systemd:
-    name: "oauth2-proxy@{{ item | ansible.builtin.regex_replace('([^/]+)\\.cfg$', '\\1') }}.service"
+    name: "oauth2-proxy@{{ item | regex_replace('^/etc/oauth2-proxy/([^/]+)\\.cfg$', '\\1')}}.service"
     state: stopped
     enabled: false
-  loop: "{{ oauth2_proxy_configs.files | default([]) }}"
+  loop: "{{ oauth2_proxy_configs.files | default([]) | map(attribute='path') }}"
 
 - name: Remove oauth2-proxy files
   ansible.builtin.file:

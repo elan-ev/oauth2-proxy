@@ -1,0 +1,12 @@
+- name: Search for domain configurations
+  ansible.builtin.find:
+    paths: /etc/oauth2-proxy
+    file_type: file
+    patterns: "*.cfg"
+  register: oauth2_proxy_restart_configs
+
+- name: Restart oauth2-proxy service for specific domain
+  ansible.builtin.systemd:
+    name: "oauth2-proxy@{{ item | regex_replace('^/etc/oauth2-proxy/([^/]+)\\.cfg$', '\\1') }}.service"
+    state: restarted
+  loop: "{{ oauth2_proxy_restart_configs.files | default([]) | map(attribute='path') }}"
