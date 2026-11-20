@@ -48,7 +48,7 @@
         success_msg: "{{ oauth2_proxy_service_name }} is enabled and running"
         quiet: true
       vars:
-        oauth2_proxy_service_name: "oauth2-proxy@myotherapp.edu.org.service"
+        oauth2_proxy_service_name: "oauth2-proxy@my-otherapp.edu.org.service"
 
     - name: Test custom TCP port 4181 is open
       ansible.builtin.wait_for:
